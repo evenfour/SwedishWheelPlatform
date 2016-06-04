@@ -5,7 +5,6 @@
  * CH4 -- PIN20 (INT3)
  */
 #define __IO volatile
-
 //Radio Controller Raw Value
 __IO int rc1_val = 0;
 __IO int rc2_val = 0;
@@ -13,10 +12,10 @@ __IO int rc3_val = 0;
 __IO int rc4_val = 0;
 
 //Pin number mapping
-int ppm1 = 2;
-int ppm2 = 3;
-int ppm3 = 21;
-int ppm4 = 20;
+int ppm1 = 2;  // Interrupt 0
+int ppm2 = 3;  // Interrupt 1
+int ppm3 = 21; // Interrupt 2
+int ppm4 = 20; // Interrupt 3
 
 //Timer for ppm signal decoding
 unsigned long rc1_pulseTick;
@@ -24,24 +23,31 @@ unsigned long rc2_pulseTick;
 unsigned long rc3_pulseTick;
 unsigned long rc4_pulseTick;
 
-/*    EN IN+ IN-
- * LF 4  28 29
- * LR 5  30 31
- * RF 6  32 33
- * RR 7  34 35
+/* Power Input: Li-Po 2S 7.4V  ------->  Motor Driver
+ *                             --LDO-->  5V Arduino ----> RC Receiver
+ * Each motor has three control pins
+ * On L298N Driver side:
+ * White -- EN   Black and Read for IN+/-
+ * On Arduino Mega 2560 side:   
+ *    EN IN+ IN-
+ * LF 4  29  28   Brown   Orange   Red
+ * LR 5  30  31   Yellow  Green    Blue
+ * RF 6  33  32   Purple  White    Gray
+ * RR 7  34  35   Black   Brown    Red
  * 
  */
-#define LF 0
-#define LR 1
-#define RF 2
-#define RR 3
-#define FORWARD 0
-#define BACK    1
-
+#define LF 0 //left front
+#define LR 1 //left rear
+#define RF 2 //right front
+#define RR 3 //right rear
+#define FORWARD 0 //towards platform head
+#define BACK    1 //towards platform tail
+// Motor control pins' list
 int MotorEN[4]={4,5,6,7};
 int MotorINP[4]={29,30,33,34};
 int MotorINM[4]={28,31,32,35};
 
+////////////////////////////////////////////////////////
 void setup() {
   // put your setup code here, to run once:
   for(int i=0;i<4;i++)
@@ -62,9 +68,10 @@ void setup() {
   
   delay(500);
 
+  //check stick middle position for safty
   while(isMidpos(rc1_val)!=true || isMidpos(rc2_val)!=true || isMidpos(rc4_val)!=true)
   {
-    delay(20);
+    delay(100);
   }
 }
 
@@ -73,6 +80,7 @@ boolean isMidpos(int rc_val)
   if( rc_val<1600 && rc_val>1400) return true;
   else return false;
 }
+
 //ISR 1~4
 void rc_isr1(){
   if( digitalRead(ppm1) == HIGH )
@@ -168,43 +176,43 @@ void loop() {
 
   }
 #endif
-  int speed = 100;
-  if( rc2_val < 1200)
+  int speed = 80;
+  if( rc2_val < 1300)
   {
     motorCmd(LF,speed,FORWARD);
     motorCmd(LR,speed,FORWARD);
     motorCmd(RF,speed,FORWARD);
     motorCmd(RR,speed,FORWARD);
   }
-  else if(rc2_val > 1800)
+  else if(rc2_val > 1700)
   {
     motorCmd(LF,speed,BACK);
     motorCmd(LR,speed,BACK);
     motorCmd(RF,speed,BACK);
     motorCmd(RR,speed,BACK);
   }
-  else if( rc4_val < 1200)
+  else if( rc4_val < 1300)
   {
     motorCmd(LF,speed,BACK);
     motorCmd(LR,speed,FORWARD);
     motorCmd(RF,speed,FORWARD);
     motorCmd(RR,speed,BACK);
   }
-  else if(rc4_val > 1800)
+  else if(rc4_val > 1700)
   {
     motorCmd(LF,speed,FORWARD);
     motorCmd(LR,speed,BACK);
     motorCmd(RF,speed,BACK);
     motorCmd(RR,speed,FORWARD);
   }
-  else if( rc1_val < 1200)
+  else if( rc1_val < 1300)
   {
     motorCmd(LF,speed,BACK);
     motorCmd(LR,speed,BACK);
     motorCmd(RF,speed,FORWARD);
     motorCmd(RR,speed,FORWARD);
   }
-  else if(rc1_val > 1800)
+  else if(rc1_val > 1700)
   {
     motorCmd(LF,speed,FORWARD);
     motorCmd(LR,speed,FORWARD);
